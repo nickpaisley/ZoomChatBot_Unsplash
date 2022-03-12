@@ -1,0 +1,33 @@
+Building out the Zoom Unplash Chatbot tutorial.
+https://marketplace.zoom.us/docs/guides/chatbots/build-a-chatbot/
+
+!!!!The wording for the Verifcation token description on this page needs updating = https://marketplace.zoom.us/develop/apps/bB7dwKgGQ-mKRkQRAUUFTA/feature
+
+
+Initialize git and npm. For the npm prompts just hit enter to use the default settings,
+$ git init
+$ npm init
+
+Create your index.js, .gitignore, and .env files,
+$ touch index.js .gitignore .env
+
+Add the start script to your package.json file in the scripts object,
+"start": "node index.js"
+
+Then install these dependencies,
+$ npm install request pg express dotenv body-parser --save
+
+Now let's run our app! I prefer to run my app with nodemon which reloads my index.js file every time I make a change and save.
+$ npm install nodemon -g
+$ nodemon
+
+Go to localhost:4000
+
+Now fire up an NGROK server = ngrok http 4000
+
+CURRENT_URL =  https://484e-2601-3cb-400-afa0-34f1-6a28-9941-849.ngrok.io
+
+
+Slash Command = unsplash303
+
+Chatbots authenticate via the client_credentials grant type.
