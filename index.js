@@ -39,6 +39,110 @@ app.get('/zoomverify/verifyzoom.html', (req, res) => {
 app.post('/unsplash', (req, res) => {
   console.log(req.body)
   res.send('Chat received')
+  
+  getChatbotToken()
+
+  function getPhoto (chatbotToken) {
+    request(`https://api.unsplash.com/photos/random?query=${req.body.payload.cmd}&orientation=landscape&client_id=${process.env.unsplash_access_key}`, (error, body) => {
+      if (error) {
+        console.log('Error getting photo from Unsplash.', error)
+        var errors = [
+            {
+              'type': 'section',
+              'sidebar_color': '#D72638',
+              'sections': [{
+                'type': 'message',
+                'text': 'Error getting photo from Unsplash.'
+              }]
+            }
+          ]
+          sendChat(errors, chatbotToken)
+      } else {
+        body = JSON.parse(body.body)
+        if (body.errors) {
+          var errors = [
+            {
+              'type': 'section',
+              'sidebar_color': '#D72638',
+              'sections': body.errors.map((error) => {
+                return { 'type': 'message', 'text': error }
+              })
+            }
+          ]
+          sendChat(errors, chatbotToken)
+        } else {
+          var photo = [
+            {
+              'type': 'section',
+              'sidebar_color': body.color,
+              'sections': [
+                {
+                  'type': 'attachments',
+                  'img_url': body.urls.regular,
+                  'resource_url': body.links.html,
+                  'information': {
+                    'title': {
+                      'text': 'Photo by ' + body.user.name
+                    },
+                    'description': {
+                      'text': 'Click to view on Unsplash'
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+          sendChat(photo, chatbotToken)
+        }
+      }
+    })
+  }
+  
+  function sendChat (chatBody, chatbotToken) {
+    request({
+      url: 'https://api.zoom.us/v2/im/chat/messages',
+      method: 'POST',
+      json: true,
+      body: {
+        'robot_jid': process.env.zoom_bot_jid,
+        'to_jid': req.body.payload.toJid,
+        'account_id': req.body.payload.accountId,
+        'content': {
+          'head': {
+            'text': '/unsplash ' + req.body.payload.cmd
+          },
+          'body': chatBody
+        }
+      },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + chatbotToken
+      }
+    }, (error, httpResponse, body) => {
+      if (error) {
+        console.log('Error sending chat.', error)
+      } else {
+        console.log(body)
+      }
+    })
+  }
+  
+  function getChatbotToken () {
+    request({
+      url: `https://api.zoom.us/oauth/token?grant_type=client_credentials`,
+      method: 'POST',
+      headers: {
+        'Authorization': 'Basic ' + Buffer.from(process.env.zoom_client_id + ':' + process.env.zoom_client_secret).toString('base64')
+      }
+    }, (error, httpResponse, body) => {
+      if (error) {
+        console.log('Error getting chatbot_token from Zoom.', error)
+      } else {
+        body = JSON.parse(body)
+        getPhoto(body.access_token)
+      }
+    })
+  }
 })
 
 app.post('/deauthorize', (req, res) => {
