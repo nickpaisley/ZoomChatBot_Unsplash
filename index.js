@@ -6,6 +6,13 @@ const request = require('request')
 const app = express()
 const port = process.env.PORT || 4000
 
+const { Client } = require('pg')
+const pg = new Client(process.env.DATABASE_URL)
+
+pg.connect().catch((error) => {
+  console.log('Error connecting to database', error)
+})
+
 app.use(bodyParser.json())
 
 app.get('/', (req, res) => {
@@ -39,8 +46,27 @@ app.get('/zoomverify/verifyzoom.html', (req, res) => {
 app.post('/unsplash', (req, res) => {
   console.log(req.body)
   res.send('Chat received')
+
+  if (req.headers.authorization === process.env.zoom_verification_token) {
+    res.status(200)
+    res.send()
+    pg.query('SELECT * FROM chatbot_token', (error, results) => {
+      if (error) {
+        console.log('Error getting chatbot_token from database.', error)
+      } else {
+        if (results.rows[0].expires_on > (new Date().getTime() / 1000)) {
+          getPhoto(results.rows[0].token)
+        } else {
+          getChatbotToken()
+        }
+      }
+    })
+  } else {
+    res.status(401)
+    res.send('Unauthorized request to Unsplash Chatbot for Zoom.')
+  }
   
-  getChatbotToken()
+  //getChatbotToken()
 
   function getPhoto (chatbotToken) {
     request(`https://api.unsplash.com/photos/random?query=${req.body.payload.cmd}&orientation=landscape&client_id=${process.env.unsplash_access_key}`, (error, body) => {
@@ -139,7 +165,14 @@ app.post('/unsplash', (req, res) => {
         console.log('Error getting chatbot_token from Zoom.', error)
       } else {
         body = JSON.parse(body)
-        getPhoto(body.access_token)
+        //getPhoto(body.access_token)
+        pg.query(`UPDATE chatbot_token SET token = '${body.access_token}', expires_on = ${(new Date().getTime() / 1000) + body.expires_in}`, (error, results) => {
+          if (error) {
+            console.log('Error setting chatbot_token in database.', error)
+          } else {
+            getPhoto(body.access_token)
+          }
+        })
       }
     })
   }
