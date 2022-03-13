@@ -153,6 +153,7 @@ app.post('/unsplash', (req, res) => {
     })
   }
   
+  
   function getChatbotToken () {
     request({
       url: `https://api.zoom.us/oauth/token?grant_type=client_credentials`,
